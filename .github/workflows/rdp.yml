@@ -1,0 +1,27 @@
+name: Free Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup Cloud PC
+      run: |
+        sudo apt update
+        sudo apt install -y qemu-system-x86 qemu-utils wget unzip
+
+        echo "Downloading Windows image..."
+        wget -O windows.img https://go.microsoft.com/fwlink/?linkid=2156292
+
+        echo "Setting up Tailscale..."
+        curl -fsSL https://tailscale.com/install.sh | sh
+        sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=GitHub-RDP --ssh
+
+        echo "Username: runneradmin"
+        echo "Password: P@ssw0rd1234"
+        echo "To connect, use the Tailscale IP shown in your Tailscale dashboard."
