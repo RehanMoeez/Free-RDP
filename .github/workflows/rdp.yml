@@ -10,18 +10,22 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Setup Cloud PC
+    - name: Setup Windows VM with RDP
       run: |
         sudo apt update
-        sudo apt install -y qemu-system-x86 qemu-utils wget unzip
+        sudo apt install -y qemu-system-x86 wget curl unzip
 
         echo "Downloading Windows image..."
         wget -O windows.img https://go.microsoft.com/fwlink/?linkid=2156292
 
         echo "Setting up Tailscale..."
         curl -fsSL https://tailscale.com/install.sh | sh
-        sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=GitHub-RDP --ssh
+        sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=github-rdp --ssh
 
-        echo "Username: runneradmin"
-        echo "Password: P@ssw0rd1234"
-        echo "To connect, use the Tailscale IP shown in your Tailscale dashboard."
+        echo "Enabling RDP multi-session..."
+        # Create autounattend setup for multiple sessions
+        cat <<EOF > enable-multi-rdp.reg
+        Windows Registry Editor Version 5.00
+
+        [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server]
+        "fSingleSessionPerUser"=dwor
