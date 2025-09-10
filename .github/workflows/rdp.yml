@@ -5,27 +5,31 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - name: Set RDP credentials
+        run: |
+          $password = "YourStrongPassword123!"
+          net user runneradmin $password
+          echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
 
-    - name: Setup Windows VM with RDP
-      run: |
-        sudo apt update
-        sudo apt install -y qemu-system-x86 wget curl unzip
+      - name: Install Tailscale
+        run: |
+          Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi -OutFile tailscale.msi
+          msiexec /i tailscale.msi /quiet
+          tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname GitHubWindowsVM --accept-routes --accept-dns=false
 
-        echo "Downloading Windows image..."
-        wget -O windows.img https://go.microsoft.com/fwlink/?linkid=2156292
+      - name: Enable RDP
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-        echo "Setting up Tailscale..."
-        curl -fsSL https://tailscale.com/install.sh | sh
-        sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=github-rdp --ssh
+      - name: Free console session
+        run: tscon 1 /dest:console
 
-        echo "Enabling RDP multi-session..."
-        # Create autounattend setup for multiple sessions
-        cat <<EOF > enable-multi-rdp.reg
-        Windows Registry Editor Version 5.00
-
-        [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server]
-        "fSingleSessionPerUser"=dwor
+      - name: Show connection info
+        run: |
+          echo "Tailscale IPv4 address:"
+          tailscale ip -4
+          echo "Username: runneradmin"
+          echo "Password: $env:RDP_PASSWORD"
