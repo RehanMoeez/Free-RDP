@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Set RDP credentials
         run: |
-          $password = "ali"
+          $password = "Ali!@#Ali"
           net user runneradmin $password
           echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
 
